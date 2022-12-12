@@ -58,6 +58,7 @@ Considering this application will be executed daily and the complexity, serverle
 - Deployment
     - AWS Serverless deployment to run the app via Lambda (s3 & RDS can used as data store before and after compute)
         - this can be done via make file and aws cli and can be pipelined via Jenkins
+        - Sample deployment pipeline using aws cli can be found [here](https://github.com/Anandkarthick/aws_pipeline_example)
         - cloudformation stacks and policies with jenkins
         - Github actions or Circle CI deployment to create a packge and deploy as lambda function
         - Schedule the job to run according to cron schedule
