@@ -1,6 +1,7 @@
 import pandas as pd
 from messari import MessariData
 import matplotlib.pyplot as plt
+import sys
 
 
 def prepare_euro_ref_data(ref_file, base_currency, min_date, max_date):
@@ -24,17 +25,21 @@ def generate_viz(merged_df):
     """
     plt.figure(figsize=(15,10))
     plt.grid(True)
-    plt.plot(merged_df['amount'], label="token_in_USD")
-    plt.plot(merged_df['eur'], label="token_in_EUR")
+    plt.plot(merged_df['amount_in_usd'], label="token_in_USD")
+    plt.plot(merged_df['euro_price'], label="token_in_EUR")
     plt.plot(merged_df['rolling_avg'], label="7day_rolling_average")
     plt.legend(loc=2)
     plt.savefig("rolling_average_picture.png")
     return 
 
-def calculate_rolling_average(ref_file, token, metric, year, base_currency, min_date, max_date):
+def calculate_rolling_average(context):
     """
         Calculate rolling average
     """
+    # unpack kwargs
+    ref_file = context['ref_file']
+    token, metric, year = context['token'], context['metric'], context['year']
+    base_currency, min_date, max_date = context['base_currency'], context['min_date'], context['max_date']
 
     # instantiate object to get bitcoin price for the given year
     token_timeseries_data = MessariData(token, metric, year).get_asset_timeseries()
@@ -44,7 +49,7 @@ def calculate_rolling_average(ref_file, token, metric, year, base_currency, min_
 
     # create dataframe with response data
     try:
-        token_df = pd.DataFrame(token_timeseries_data['data']['values'], columns=['Date', 'amount'])
+        token_df = pd.DataFrame(token_timeseries_data['data']['values'], columns=['Date', 'amount_in_usd'])
     except:
         raise ("Error extracting response")
     
@@ -53,17 +58,29 @@ def calculate_rolling_average(ref_file, token, metric, year, base_currency, min_
 
     # marge source and reference data to calculate euro conversion from USD
     merged_df = euro_ref.merge(token_df, on='Date')
-    merged_df['eur'] = merged_df['USD'] * merged_df['amount']
+    merged_df['euro_price'] = merged_df['USD'] * merged_df['amount_in_usd']
 
     # calculate 7 rolling average and dropping nulls
-    merged_df['rolling_avg'] = merged_df['eur'].rolling(7).mean()
-    merged_df = merged_df.dropna()
+    merged_df['rolling_avg'] = merged_df['euro_price'].rolling(7).mean()
+    #merged_df = merged_df.dropna()
+
+    # del unused columns
+    del merged_df['USD']
 
     # prepare visualization
     generate_viz(merged_df)
 
-    return 
+    # create output csv
+    merged_df.to_csv(f'data_output/{base_currency}_EUR_{token}_roll_avg_{year}.csv', index=False)
 
-print(calculate_rolling_average('data/eurofxref-hist.csv',
-                                'bitcoin', 'price', '2021', 'USD',
-                                '2021-01-01', '2021-12-31'))
+    print("Process completed")
+    return 
+'''
+print(calculate_rolling_average('data/eurofxref-hist.csv', 'bitcoin', 'price', '2021', 'USD', '2021-01-01', '2021-12-31'))
+'''
+# unpack args and sending context 
+args = sys.argv[1:]
+key_words = ['ref_file', 'token', 'metric', 'year', 'base_currency', 'min_date', 'max_date']
+context = {key:args[index] for index, key in enumerate(key_words)}
+
+calculate_rolling_average(context)

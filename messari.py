@@ -19,3 +19,21 @@ class MessariData:
         except Exception as e:
             raise e
         return response.json()
+
+
+if __name__ == "__main__":
+    test_md = MessariData('bitcoin', 'price', 2021)
+    response = test_md.get_asset_timeseries({"start":"2021-01-01T01:00:00.000Z",
+                    "end":f"2021-01-02T01:00:00.000Z",
+                    "interval":"1d",
+                    "columns":"close",
+                    "timestamp-format":"rfc3339"})
+
+    # asserting data in response keys
+    assert "data" in response.keys()
+
+    # checking token symbol
+    assert response["data"]["symbol"] == "BTC"
+
+    # check value
+    assert response["data"]["values"][0][1] == 32200.200908880128
